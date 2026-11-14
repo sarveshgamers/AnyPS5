@@ -46,4 +46,12 @@ void APS5_VABI cairo_set_operator(CairoContext* context, int operation);
 int APS5_VABI cairo_get_operator(CairoContext* context);
 void APS5_VABI cairo_rectangle(CairoContext* context, double x, double y,
                                double width, double height);
+
+void APS5_VABI cairo_paint(CairoContext* context);
+void APS5_VABI cairo_paint_with_alpha(CairoContext* context, double alpha);
+void APS5_VABI cairo_fill(CairoContext* context);
+void APS5_VABI cairo_fill_preserve(CairoContext* context);
+void APS5_VABI cairo_stroke(CairoContext* context);
+void APS5_VABI cairo_stroke_preserve(CairoContext* context);
+void APS5_VABI cairo_clip(CairoContext* context);
 }

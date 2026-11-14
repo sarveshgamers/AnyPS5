@@ -235,4 +235,32 @@ void APS5_VABI cairo_path_destroy(CairoPath* path) {
     aps5_cairo_path_destroy(reinterpret_cast<cairo_path_t*>(path));
 }
 
+void APS5_VABI cairo_paint(CairoContext* context) {
+    aps5_cairo_paint(Backend(context));
+}
+
+void APS5_VABI cairo_paint_with_alpha(CairoContext* context, double alpha) {
+    aps5_cairo_paint_with_alpha(Backend(context), alpha);
+}
+
+void APS5_VABI cairo_fill(CairoContext* context) {
+    aps5_cairo_fill(Backend(context));
+}
+
+void APS5_VABI cairo_fill_preserve(CairoContext* context) {
+    aps5_cairo_fill_preserve(Backend(context));
+}
+
+void APS5_VABI cairo_stroke(CairoContext* context) {
+    aps5_cairo_stroke(Backend(context));
+}
+
+void APS5_VABI cairo_stroke_preserve(CairoContext* context) {
+    aps5_cairo_stroke_preserve(Backend(context));
+}
+
+void APS5_VABI cairo_clip(CairoContext* context) {
+    aps5_cairo_clip(Backend(context));
+}
+
 }

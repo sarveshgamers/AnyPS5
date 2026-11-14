@@ -47,7 +47,6 @@ enum cairo_hint_metrics_t : int {
 extern "C" {
 
 int APS5_VABI cairo_scaled_font_get_font_face();
-int APS5_VABI cairo_paint();
 int APS5_VABI cairo_font_face_set_user_data();
 int APS5_VABI cairo_stroke_extents();
 int APS5_VABI cairo_arc_negative();
@@ -69,18 +68,12 @@ int APS5_VABI cairo_scaled_font_text_extents();
 int APS5_VABI cairo_pattern_create_linear();
 int APS5_VABI cairo_clip_extents();
 int APS5_VABI cairo_set_scaled_font();
-int APS5_VABI cairo_fill();
 int APS5_VABI cairo_pop_group_to_source();
-int APS5_VABI cairo_clip();
 int APS5_VABI cairo_arc();
-int APS5_VABI cairo_stroke_preserve();
 int APS5_VABI cairo_ft_scaled_font_unlock_face();
-int APS5_VABI cairo_paint_with_alpha();
 int APS5_VABI cairo_scaled_font_status();
 int APS5_VABI cairo_in_fill();
 int APS5_VABI cairo_font_face_get_user_data();
-int APS5_VABI cairo_stroke();
-int APS5_VABI cairo_fill_preserve();
 int APS5_VABI cairo_fill_extents();
 int APS5_VABI cairo_ft_font_face_create_for_ft_face();
 int APS5_VABI cairo_pattern_destroy();
