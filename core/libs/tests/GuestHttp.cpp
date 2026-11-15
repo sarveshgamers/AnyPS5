@@ -863,6 +863,9 @@ int main(int argc, char** argv) {
     Require(sceHttpGetLastErrno(1, &httpErrno) == 0);
     Require(httpErrno == 0);
     Require(sceHttpGetLastErrno(1, nullptr) == invalidValue);
+    errno = 71;
+    Require(sceHttpGetLastErrno(1, reinterpret_cast<int*>(0x10)) == invalidValue);
+    Require(errno == 71);
     Require(sceHttpsSetSslVersion(1, 0) == 0);
     Require(sceHttpSetRedirectCallback(1, nullptr, nullptr) == 0);
     Require(sceHttpSetCookieRecvCallback(1, nullptr, nullptr) == 0);

@@ -591,7 +591,11 @@ int APS5_VABI sceHttpGetLastErrno(int request_id, int* errno_out) {
     if (errno_out == nullptr) {
         return ERROR_INVALID_VALUE;
     }
-    *errno_out = 0;
+    const int lastErrno = 0;
+    const int savedErrno = errno;
+    const bool copied = GuestCopyOut_nid_no_patch(errno_out, &lastErrno, sizeof(lastErrno));
+    errno = savedErrno;
+    if (!copied) return ERROR_INVALID_VALUE;
     return 0;
 }
 
