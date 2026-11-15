@@ -89,20 +89,23 @@ static void PrepareTransport(int id, Http2Handle& handle) {
     }
 }
 
+static std::shared_ptr<Http2::Request> Transport(int id, bool create) {
+    std::lock_guard lock(g_handlesMutex);
+    auto* handle = FindHandle(id, Http2Kind::Request);
+    if (!handle) return nullptr;
+    if (create) PrepareTransport(id, *handle);
+    if (!handle->transport) NotImplemented_nid_no_patch("sceHttp2: request has not been sent");
+    return handle->transport;
+}
+
 static int CompleteAsync(const char* function, int req_id, const void* postData, std::size_t size, const Http2AsyncOption* kqueue_option, const void* option) {
-    if (std::getenv("APS5_NET_DISCONNECTED") == nullptr) {
-        NotImplemented_nid_no_patch(function);
-        return 0;
-    }
     if (option != nullptr) {
         NotImplemented_nid_no_patch(function);
         return 0;
     }
-    std::lock_guard handlesLock(g_handlesMutex);
-    auto* handle = FindHandle(req_id, Http2Kind::Request);
-    if (!handle) return ERROR_INVALID_ID;
-    PrepareTransport(req_id, *handle);
-    const int result = handle->transport->Send(postData, size);
+    const auto request = Transport(req_id, true);
+    if (!request) return ERROR_INVALID_ID;
+    const int result = request->Send(postData, size);
     std::lock_guard completionsLock(g_completionsMutex);
     if (kqueue_option != nullptr) {
         if (sceKernelTriggerUserEvent(kqueue_option->equeue, kqueue_option->user_event_id, kqueue_option->user_data) != 0) {
@@ -171,16 +174,6 @@ static bool IsConnectionHeader(const char* name) {
     }
     return true;
 }
-
-static std::shared_ptr<Http2::Request> Transport(int id, bool create) {
-    std::lock_guard lock(g_handlesMutex);
-    auto* handle = FindHandle(id, Http2Kind::Request);
-    if (!handle) return nullptr;
-    if (create) PrepareTransport(id, *handle);
-    if (!handle->transport) NotImplemented_nid_no_patch("sceHttp2: request has not been sent");
-    return handle->transport;
-}
-
 
 extern "C" {
 
@@ -403,7 +396,7 @@ int APS5_VABI sceHttp2WaitAsync(int req_id, Http2AsyncResult* result, uint32_t* 
         std::lock_guard lock(g_handlesMutex);
         if (FindHandle(req_id, Http2Kind::Request) == nullptr) return ERROR_INVALID_ID;
     }
-    if (std::getenv("APS5_NET_DISCONNECTED") != nullptr) {
+    {
         std::lock_guard lock(g_completionsMutex);
         const auto pending = g_completions.find(req_id);
         if (pending != g_completions.end() && !pending->second.empty()) {

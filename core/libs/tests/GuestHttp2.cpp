@@ -321,12 +321,11 @@ int main(int argc, char** argv) {
     Require(sceHttp2GetMemoryPoolStats(context, &stats) == 0);
     Require(stats.pool_size == 0x10000 && stats.max_inuse_size == 0 && stats.current_inuse_size == 0 && stats.reserved == 0);
     KernelEqueue eq = 0;
-    Require(sceKernelCreateEqueue(&eq, "http2-unsupported-async") == 0);
+    Require(sceKernelCreateEqueue(&eq, "http2-async-send") == 0);
     Require(sceKernelAddUserEventEdge(eq, request) == 0);
     Http2AsyncOption option{};
     option.equeue = eq;
     option.user_event_id = request;
-    Require(Throws([&] { sceHttp2SendRequestAsync(request, nullptr, 0, &option, nullptr); }));
     Http2AsyncResult result{};
     result.req_id = 123;
     std::uint32_t timeout = 500;
@@ -336,10 +335,21 @@ int main(int argc, char** argv) {
     Require(sceHttp2WaitAsync(request, &result, &timeout, reinterpret_cast<void*>(0x10)) == static_cast<int>(0x817B11FE));
     Require(sceHttp2WaitAsync(-1, &result, &timeout, nullptr) == InvalidId);
     Require(sceHttp2ReadDataAsync(request, nullptr, 0, nullptr, nullptr) == static_cast<int>(0x80436063));
+    const int asynchronous = sceHttp2CreateRequestWithURL(tmpl, "GET", "https://localhost/async", 0);
+    Require(asynchronous > 0 && sceKernelAddUserEventEdge(eq, asynchronous) == 0);
+    Http2AsyncOption asyncOption = option;
+    asyncOption.user_event_id = asynchronous;
+    Http2SetLookupHook_nid_no_patch(OfflineLookup);
+    Require(sceHttp2SendRequestAsync(asynchronous, nullptr, 0, &asyncOption, nullptr) == 0);
+    Http2SetLookupHook_nid_no_patch(nullptr);
     KernelEvent event{};
     int count = 123;
     const KernelUseconds poll = 0;
-    Require(sceKernelWaitEqueue(eq, &event, 1, &count, &poll) != 0);
+    Require(sceKernelWaitEqueue(eq, &event, 1, &count, &poll) == 0 && count == 1);
+    Require(sceHttp2WaitAsync(asynchronous, &result, &timeout, nullptr) == 0);
+    Require(result.req_id == asynchronous && result.event_type == 0 && result.result == static_cast<int>(0x804101e6));
+    Require(Throws([&] { sceHttp2WaitAsync(asynchronous, &result, &timeout, nullptr); }));
+    Require(sceHttp2DeleteRequest(asynchronous) == 0);
     {
 #ifdef _WIN32
         _putenv("APS5_NET_DISCONNECTED=1");

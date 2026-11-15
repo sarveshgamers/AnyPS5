@@ -1347,6 +1347,44 @@ void Success(int ssl, Mode mode, bool disableCa = false) {
     Require(sceHttp2SendRequest(client.request, nullptr, 0) == static_cast<int>(0x817b1066), "another send after a complete response");
 }
 
+void Async(int ssl) {
+    std::fprintf(stderr, "HTTP2 asynchronous send scenario\n");
+    Server server(Mode::Normal);
+    Client client(ssl);
+    client.Create(server.Url(), "POST", 5);
+    KernelEqueue equeue = 0;
+    Require(sceKernelCreateEqueue(&equeue, "http2-async-send") == 0, "async equeue");
+    Require(sceKernelAddUserEventEdge(equeue, client.request) == 0, "async user event");
+    Http2AsyncOption option{};
+    option.equeue = equeue;
+    option.user_event_id = client.request;
+    Require(sceHttp2SendRequestAsync(client.request, "hello", 5, &option, nullptr) == 0, "async send submission");
+    KernelEvent event{};
+    int count = 0;
+    const KernelUseconds poll = 0;
+    Require(sceKernelWaitEqueue(equeue, &event, 1, &count, &poll) == 0 && count == 1, "async send user event");
+    Http2AsyncResult result{};
+    std::uint32_t timeout = 0;
+    Require(sceHttp2WaitAsync(client.request, &result, &timeout, nullptr) == 0, "async send completion");
+    Require(result.req_id == client.request && result.event_type == 0 && result.result == 0, "async send completion result");
+    int status = -1;
+    Require(sceHttp2GetStatusCode(client.request, &status) == 0 && status == 200, "async send status");
+    std::string body;
+    std::array<char, 32> buffer;
+    for (;;) {
+        const int read = sceHttp2ReadData(client.request, buffer.data(), buffer.size());
+        Require(read >= 0 && read <= static_cast<int>(buffer.size()), "async send read");
+        if (read == 0) break;
+        body.append(buffer.data(), static_cast<std::size_t>(read));
+    }
+    Require(body == "response body", "async send body");
+    Require(Throws([&] { sceHttp2WaitAsync(client.request, &result, &timeout, nullptr); }), "empty async queue throws");
+    server.Join();
+    Require(server.Upload() == "hello", "async send upload");
+    Require(server.Negotiated(), "async send h2 ALPN");
+    Require(sceKernelDeleteEqueue(equeue) == 0, "async equeue delete");
+}
+
 void Gzip(int ssl) {
     std::fprintf(stderr, "HTTP2 gzip scenario\n");
     for (const int enabled : {1, 0}) {
@@ -1984,6 +2022,8 @@ int main(int argc, char** argv) {
         Require(sceSslTerm_nid_postfix(unloaded) == 0, "SSL context without certificates term");
     } else if (argc == 2 && std::string_view(argv[1]) == "--auth-status") {
         AuthenticationStatuses(ssl);
+    } else if (argc == 2 && std::string_view(argv[1]) == "--async") {
+        Async(ssl);
     } else if (argc == 2 && std::string_view(argv[1]) == "--gzip-members") {
         GzipMembers(ssl);
     } else if (argc == 2 && std::string_view(argv[1]) == "--gzip-headers") {
