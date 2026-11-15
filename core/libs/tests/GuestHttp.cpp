@@ -740,6 +740,13 @@ int main(int argc, char** argv) {
     Require(sceHttpSetCookieEnabled(9999, 0) == invalidId);
     cookie = 0x5a5a;
     Require(sceHttpGetCookieEnabled(9999, &cookie) == invalidId && cookie == 0x5a5a);
+    int auth = 0x5a5a;
+    Require(sceHttpGetAuthEnabled(tmpl, &auth) == 0 && auth == 0);
+    auth = 0x5a5a;
+    Require(sceHttpGetAuthEnabled(9999, &auth) == invalidId && auth == 0x5a5a);
+    errno = 71;
+    Require(sceHttpGetAuthEnabled(tmpl, reinterpret_cast<int*>(0x10)) == invalidValue);
+    Require(errno == 71);
     const int conn = sceHttpCreateConnectionWithURL(tmpl, "http://127.0.0.1:8080", 0);
     Require(conn > 0);
     HttpConnectionStat connStat{};
